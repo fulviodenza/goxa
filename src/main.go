@@ -16,7 +16,7 @@ func main() {
 	go adapter.Receiver(r)
 
 	for {
-		fmt.Print("> ")
+		fmt.Print("\n> ")
 		in := bufio.NewReader(os.Stdin)
 		line, err := in.ReadSlice('\n')
 		if err != nil {
@@ -65,7 +65,7 @@ func main() {
 				continue
 			}
 
-			fmt.Printf("\n< %s + %s = %d", firstNumber, secondNumber, sum)
+			fmt.Printf("\n< %s+%s=%d", firstNumber, secondNumber, sum)
 		} else {
 			fmt.Println("Invalid command")
 		}

@@ -98,17 +98,48 @@ func Receiver(ch chan<- string) {
 		go func() {
 			fmt.Printf("\n< SERVER: Connection got from %s\n> ", conn.RemoteAddr().String())
 
-			// Read the incoming connection into the buffer.
-			buffer := make([]byte, 1024)
-			_, err := conn.Read(buffer)
-			if err != nil {
-				fmt.Printf("\n< SERVER: Error reading: %s\n> ", err.Error())
-			}
+			for {
+				// Read the incoming connection into the buffer.
+				buffer := make([]byte, 1024)
+				_, err := conn.Read(buffer)
+				if err != nil {
+					fmt.Printf("\n< SERVER: Error reading: %s\n> ", err.Error())
+					break
+				}
 
-			// Send a response back to person contacting us.
-			conn.Write([]byte("CONNECTED on port :" + port + ":"))
+				// Check if first bytes are CONNECT
+				if string(buffer[0:7]) == "CONNECT" {
+					// Send a response back to person contacting us.
+					conn.Write([]byte("CONNECTED on port :" + port + ":"))
+				} else {
+
+					// Handle the buffer
+					b, _ := handleBuffer(buffer)
+					// Send a response back to person contacting us.
+					conn.Write(b)
+				}
+			}
 		}()
 	}
+}
+
+func handleBuffer(buffer []byte) ([]byte, error) {
+
+	// Split the buffer by spaces
+	split := strings.Split(string(buffer), " ")
+	switch split[0] {
+	case "ADD":
+		v1, err := strconv.Atoi(split[1])
+		if err != nil {
+			return nil, err
+		}
+		v2, err := strconv.Atoi(split[2])
+		if err != nil {
+			return nil, err
+		}
+		return []byte(fmt.Sprint(v1 + v2)), nil
+	}
+	return []byte("EMPTY_RESPONSE"), nil
 }
 
 func contains(n int, a []int) bool {
@@ -123,7 +154,7 @@ func contains(n int, a []int) bool {
 
 func Add(a, b string, conn net.Conn) (int, error) {
 
-	if _, err := conn.Write([]byte(a + "+" + b)); err != nil {
+	if _, err := conn.Write([]byte("ADD " + a + " " + b + " ")); err != nil {
 		return 0, err
 	}
 
@@ -132,7 +163,7 @@ func Add(a, b string, conn net.Conn) (int, error) {
 		return 0, err
 	}
 
-	resp := string(buffer)
+	resp := string(buffer[0])
 
 	return strconv.Atoi(resp)
 }
