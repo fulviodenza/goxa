@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 	"goxa/src/adapter/entities"
-	"math/rand"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 )
-
-var busyPorts = []int{}
 
 func NewConn(ip string, port string) (net.Conn, error) {
 
@@ -42,19 +39,6 @@ func NewConn(ip string, port string) (net.Conn, error) {
 	resp := string(buffer)
 	fmt.Printf("< %s\n> ", resp)
 
-	// if strings.Contains(resp, "END_CONN") {
-	// 	break
-	// }
-
-	// split string by : and get the second part
-	// which is the port number
-	portN, err := strconv.Atoi(strings.Split(resp, ":")[1])
-	if err != nil {
-		return nil, err
-	}
-
-	busyPorts = append(busyPorts, portN)
-
 	return conn, nil
 }
 
@@ -64,28 +48,13 @@ func NewConn(ip string, port string) (net.Conn, error) {
 // is put.
 func Receiver(ch chan<- string) {
 
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
-	portN := r.Intn(8000-5000) + 5000
-
-	// If the port is already in use, generate a new one
-	for {
-		if !contains(portN, busyPorts) {
-			break
-		} else {
-			portN = r.Intn(8000-5000) + 5000
-			busyPorts = append(busyPorts, portN)
-		}
-	}
-
-	port := fmt.Sprint(portN)
-
-	fmt.Printf("\n< SERVER: Listening for connections on port %s\n> ", port)
-
-	l, err := net.Listen("tcp", "localhost:"+port)
+	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		fmt.Printf("\n< SERVER: Error listening: %s\n> ", err.Error())
 	}
+
+	_, port, err := net.SplitHostPort(l.Addr().String())
+	fmt.Printf("\n< SERVER: Listening for connections on port %s\n> ", port)
 
 	for {
 
@@ -110,7 +79,7 @@ func Receiver(ch chan<- string) {
 				// Check if first bytes are CONNECT
 				if string(buffer[0:7]) == "CONNECT" {
 					// Send a response back to person contacting us.
-					conn.Write([]byte("CONNECTED on port :" + port + ":"))
+					conn.Write([]byte("CONNECTED on port: " + port))
 				} else {
 
 					// Handle the buffer
@@ -167,3 +136,7 @@ func Add(a, b string, conn net.Conn) (int, error) {
 
 	return strconv.Atoi(resp)
 }
+
+// func Collatz(n1, n2 int, conn net.Conn) (bool, error) {
+
+// }
